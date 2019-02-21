@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 
-# __author__ = 'jun-x'
+__author__ = 'jun-x'
 
 import asyncio, logging
 
@@ -10,8 +10,7 @@ import aiomysql
 def log(sql, args=()):
     logging.info('SQL: %s' % sql)
 
-@asyncio.coroutine
-def create_pool(loop, **kw):
+async def create_pool(loop, **kw):
     logging.info('create database connection pool...')
     global __pool
     __pool = await aiomysql.create_pool(
@@ -27,18 +26,16 @@ def create_pool(loop, **kw):
         loop=loop
     )
 
-@asyncio.coroutine
-def select(sql, args, size=None):
+async def select(sql, args, size=None):
     log(sql, args)
     global __pool
-    with (yield from __pool) as conn:
-        cur = yield from conn.cursor(aiomysql.DictCursor)
-        yield from cur.execute(sql.replace('?', '%s'), args or ())
-        if size:
-            rs = yield from cur.fetchmany(size)
-        else:
-            rs = yield from cur.fetchall()
-        yield from cur.close()
+    async with __pool.get() as conn:
+        async with conn.cursor(aiomysql.DictCursor) as cur:
+            await cur.execute(sql.replace('?', '%s'), args or ())
+            if size:
+                rs = await cur.fetchmany(size)
+            else:
+                rs = await cur.fetchall()
         logging.info('rows returned: %s' % len(rs))
         return rs
 
