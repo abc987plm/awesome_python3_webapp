@@ -115,13 +115,13 @@ class ModelMetaclass(type):
                 if v.primary_key:
                     # find primary key
                     if primaryKey:
-                        raise RuntimeError('Duplicate primary key for field: %s' % k)
+                        raise BaseException('Duplicate primary key for field: %s' % k)
                     primaryKey = k
 
                 else:
                     fields.append(k)
             if not primaryKey:
-                raise RuntimeError('Primary key not found.')
+                raise BaseException('Primary key not found.')
             for k in mappings.keys():
                 attrs.pop(k)
             escaped_fields = list(map(lambda f: '`%s`' % f, fields))
