@@ -9,5 +9,5 @@ __author__ = 'jun-x'
 
 import time, uuid
 
-from orm import Model, StringField, BooleanField, FloatField, TextField
+from obj.awesome_python3_webapp.www.orm import Model, StringField, BooleanField, FloatField, TextField
 
