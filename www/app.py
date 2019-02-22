@@ -1,5 +1,4 @@
-#!/user/bin/env python3
-
+#! python3
 
 __author__ = 'jun-x'
 
@@ -14,11 +13,8 @@ from datetime import datetime
 
 from aiohttp import web
 from jinja2 import Environment, FileSystemLoader
-import obj.awesome_python3_webapp.www.orm
 import obj.awesome_python3_webapp.www.orm as orm
-# import obj.awesome_python3_webapp.www.coroweb as coroweb
 from obj.awesome_python3_webapp.www.coroweb import add_routes, add_static
-
 
 def init_jinja2(app, **kw):
     logging.info('init jinja2...')
@@ -112,7 +108,6 @@ def datetime_filter(t):
 
 # def index(request):
 #     return web.Response(body=b'<h1>Awesome</h1',headers={'content-type':'text/html'})
-
 # @asyncio.coroutines
 async def init(loop):
     await orm.create_pool(loop=loop, host='127.0.0.1', post=3306, user='www', password='www', db='awesome')
