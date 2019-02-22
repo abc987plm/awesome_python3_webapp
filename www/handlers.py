@@ -12,8 +12,9 @@ from obj.awesome_python3_webapp.www.models import User, Comment, Blog, next_id
 
 @get('/')
 async def index(request):
+    logging.info('handlers.py handlers index: %s' % request)
     users = await User.findAll()
     return {
-        '__template__': 'test.html',
+        '__template__': 'new.html',
         'users': users
     }
