@@ -12,8 +12,6 @@ from obj.awesome_python3_webapp.www.apis import APIError
 def get(path):
     '''
     Define decorator @get('/path')
-    :param path:
-    :return:
     '''
     def decorator(func):
         @functools.wraps(func)
@@ -27,8 +25,6 @@ def get(path):
 def post(path):
     '''
     Define decorator @post('/path')
-    :param path:
-    :return:
     '''
     def decorator(func):
         @functools.wraps(func)

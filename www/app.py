@@ -1,5 +1,6 @@
 #! python3
 
+
 __author__ = 'jun-x'
 
 '''
@@ -13,8 +14,11 @@ from datetime import datetime
 
 from aiohttp import web
 from jinja2 import Environment, FileSystemLoader
+
 import obj.awesome_python3_webapp.www.orm as orm
 from obj.awesome_python3_webapp.www.coroweb import add_routes, add_static
+
+from obj.awesome_python3_webapp.www.config import configs
 
 def init_jinja2(app, **kw):
     logging.info('init jinja2...')
@@ -37,14 +41,18 @@ def init_jinja2(app, **kw):
             env.filters[name] = f
     app['__templating__'] = env
 
+# @asyncio.coroutine
 async def logger_factory(app, handler):
+    # @asyncio.coroutine
     async def logger(request):
         logging.info('Request: %s %s' % (request.method, request.path))
         # await asyncio.sleep(0.3)
         return (await handler(request))
     return logger
 
+# @asyncio.coroutine
 async def data_factory(app, handler):
+    # @asyncio.coroutine
     async def parse_data(request):
         if request.method == 'POST':
             if request.content_type.startswith('application/json'):
@@ -53,9 +61,12 @@ async def data_factory(app, handler):
             elif request.content_type.startswith('application/x-www-form-urlencoded'):
                 request.__data__ = await request.post()
                 logging.info('request form: %s' % str(request.__data__))
-        return parse_data
+        return (await handler(request))
+    return parse_data
 
+# @asyncio.coroutine
 async def response_factory(app, handler):
+    # @asyncio.coroutine
     async def response(request):
         logging.info('Response handler...')
         r = await handler(request)
@@ -75,7 +86,7 @@ async def response_factory(app, handler):
             template = r.get('__template__')
             if template is None:
                 resp = web.Response(body=json.dumps(r, ensure_ascii=False, default=lambda o: o.__dict__).encode('utf-8'))
-                resp.content_type = 'application/jason;charset=utf-8'
+                resp.content_type = 'application/json;charset=utf-8'
                 return resp
             else:
                 resp = web.Response(body=app['__templating__'].get_template(template).render(**r).encode('utf-8'))
@@ -106,11 +117,9 @@ def datetime_filter(t):
     dt = datetime.fromtimestamp(t)
     return u'%s-%s-%s' % (dt.month, dt.day, dt.year)
 
-# def index(request):
-#     return web.Response(body=b'<h1>Awesome</h1',headers={'content-type':'text/html'})
 # @asyncio.coroutine
 async def init(loop):
-    await orm.create_pool(loop=loop, host='127.0.0.1', port=3306, user='root', password='1234', db='test')
+    await orm.create_pool(loop=loop, **configs.db)
     app = web.Application(loop=loop, middlewares=[
         logger_factory, response_factory
     ])
