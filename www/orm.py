@@ -10,6 +10,7 @@ import aiomysql
 def log(sql, args=()):
     logging.info('SQL: %s' % sql)
 
+
 async def create_pool(loop, **kw):
     logging.info('create database connection pool...')
     global __pool
@@ -26,6 +27,7 @@ async def create_pool(loop, **kw):
         loop=loop
     )
 
+
 async def select(sql, args, size=None):
     log(sql, args)
     global __pool
@@ -38,6 +40,8 @@ async def select(sql, args, size=None):
                 rs = await cur.fetchall()
         logging.info('rows returned: %s' % len(rs))
         return rs
+
+
 
 async def execute(sql, args, autocommit=True):
     log(sql)
@@ -55,6 +59,7 @@ async def execute(sql, args, autocommit=True):
                 await conn.rollback()
             raise
         return affected
+
 
 def create_args_string(num):
     L = []
@@ -113,27 +118,26 @@ class ModelMetaclass(type):
                 logging.info(' found mapping: %s ==> %s' % (k, v))
                 mappings[k] = v
                 if v.primary_key:
-                    # find primary key
+                    # .
                     if primaryKey:
                         raise RuntimeError('Duplicate primary key for field: %s' % k)
                     primaryKey = k
-
                 else:
                     fields.append(k)
-            if not primaryKey:
-                raise RuntimeError('Primary key not found.')
-            for k in mappings.keys():
-                attrs.pop(k)
-            escaped_fields = list(map(lambda f: '`%s`' % f, fields))
-            attrs['__mappings__'] = mappings # 保存属性和列的映射关系
-            attrs['__table__'] = tableName
-            attrs['__primary_key__'] = primaryKey
-            attrs['__fields__'] = fields
-            attrs['__select__'] = 'select `%s`, %s from `%s`' % (primaryKey, ', '.join(escaped_fields), tableName)
-            attrs['__insert__'] = 'insert into `%s` (%s, `%s`) values (%s)' % (tableName, ', '.join(escaped_fields), primaryKey, create_args_string(len(escaped_fields)+1))
-            attrs['__update__'] = 'update `%s` set %s where `%s`=?' % (tableName, ', '.join(map(lambda f: '`%s`=?' % (mappings.get(f).name or f), fields)), primaryKey)
-            attrs['__delete__'] = 'delete from `%s` where `%s`=?' % (tableName, primaryKey)
-            return type.__new__(cls, name, bases, attrs)
+        if not primaryKey:
+            raise RuntimeError('Primary key not found.')
+        for k in mappings.keys():
+            attrs.pop(k)
+        escaped_fields = list(map(lambda f: '`%s`' % f, fields))
+        attrs['__mappings__'] = mappings # .
+        attrs['__table__'] = tableName
+        attrs['__primary_key__'] = primaryKey
+        attrs['__fields__'] = fields
+        attrs['__select__'] = 'select `%s`, %s from `%s`' % (primaryKey, ', '.join(escaped_fields), tableName)
+        attrs['__insert__'] = 'insert into `%s` (%s, `%s`) values (%s)' % (tableName, ', '.join(escaped_fields), primaryKey, create_args_string(len(escaped_fields)+1))
+        attrs['__update__'] = 'update `%s` set %s where `%s`=?' % (tableName, ', '.join(map(lambda f: '`%s`=?' % (mappings.get(f).name or f), fields)), primaryKey)
+        attrs['__delete__'] = 'delete from `%s` where `%s`=?' % (tableName, primaryKey)
+        return type.__new__(cls, name, bases, attrs)
 
 class Model(dict, metaclass=ModelMetaclass):
 
@@ -162,6 +166,7 @@ class Model(dict, metaclass=ModelMetaclass):
                 setattr(self, key, value)
         return value
 
+
     @classmethod
     async def findAll(cls, where=None, args=None, **kw):
         ' find objects by where clause.'
@@ -189,6 +194,7 @@ class Model(dict, metaclass=ModelMetaclass):
         rs = await select(' '.join(sql), args)
         return [cls(**r) for r in rs]
 
+
     @classmethod
     async  def findNumber(cls, selectField, where=None, args=None):
         ' find number by select and where.'
@@ -201,6 +207,7 @@ class Model(dict, metaclass=ModelMetaclass):
             return None
         return rs[0]['_num_']
 
+
     @classmethod
     async def find(cls, pk) :
         ' find object by primary key.'
@@ -209,6 +216,7 @@ class Model(dict, metaclass=ModelMetaclass):
             return None
         return cls(**rs[0])
 
+
     async def save(self):
         args = list(map(self.getValueOrDefault, self.__fields__))
         args.append(self.getValueOrDefault(self.__primary_key__))
@@ -216,12 +224,14 @@ class Model(dict, metaclass=ModelMetaclass):
         if rows != 1:
             logging.warn('failed to insert record: affected rows: %s' % rows)
 
+
     async def update(self):
         args = list(map(self.getValue, self.__fields__))
         args.append(self.getValue(self.__primary_key__))
         rows = await execute(self.__update__, args)
         if rows != 1:
             logging.warn('failed to update by primary key: affected rows: %s' % rows)
+
 
     async def remove(self):
         args = [self.getValue(self.__primary_key__)]
