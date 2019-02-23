@@ -108,9 +108,9 @@ def datetime_filter(t):
 
 # def index(request):
 #     return web.Response(body=b'<h1>Awesome</h1',headers={'content-type':'text/html'})
-# @asyncio.coroutines
+# @asyncio.coroutine
 async def init(loop):
-    await orm.create_pool(loop=loop, host='127.0.0.1', post=3306, user='root', password='1234', db='test')
+    await orm.create_pool(loop=loop, host='127.0.0.1', port=3306, user='root', password='1234', db='test')
     app = web.Application(loop=loop, middlewares=[
         logger_factory, response_factory
     ])
