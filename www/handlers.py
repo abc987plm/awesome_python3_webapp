@@ -28,7 +28,7 @@ def user2cookie(user, max_age):
     L = [user.id, expires, hashlib.sha1(s.encode('utf-8')).hexdigest()]
     return '-'.join(L)
 
-async def cookie2user(cookie_str):
+def cookie2user(cookie_str):
     '''
     Parse cookie and load user if cookie is valid.
     :param cookie_str:
@@ -43,7 +43,7 @@ async def cookie2user(cookie_str):
         uid, expires, sha1 = L
         if int(expires) < time.time():
             return None
-        user = await User.find(uid)
+        user = yield from User.find(uid)
         if user is None:
             return None
         s = '%s-%s-%s-%s' % (uid, user.passwd, expires, _COOKIE_KEY)
@@ -114,7 +114,7 @@ def signout(request):
     return r
 
 _RE_EMAIL = re.compile(r'[a-z0-9\.\-\_]+\@[a-z0-9\-\_]+(\.[a-z0-9\-\_]+){1,4}$')
-_ER_SHA1 = re.compile(r'^[0-9a-f]{40}$')
+_RE_SHA1 = re.compile(r'^[0-9a-f]{40}$')
 
 @post('/api/users')
 def api_get_users(*,email, name, passwd):
@@ -122,7 +122,7 @@ def api_get_users(*,email, name, passwd):
         raise APIValueError('name')
     if not email or not _RE_EMAIL.match(email):
         raise APIValueError('email')
-    if not passwd or not _ER_SHA1.match(passwd):
+    if not passwd or not _RE_SHA1.match(passwd):
         raise APIValueError('passwd')
     users = yield from User.findAll('email=?', [email])
     if len(users) > 0:
