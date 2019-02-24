@@ -30,8 +30,8 @@ $(function () {
                 if (! validateEmail(this.email.trim().toLowerCase())) {
                     return $form.showFormError('请输入正确的Email地址');
                 }
-                if (this.password1.length < 1) {
-                    return $form.showFormError('口令长度至少为6个字符');
+                if (this.password1.length < 4) {
+                    return $form.showFormError('口令长度至少为4个字符');
                 }
                 if (this.password1 !== this.password2){
                     return $form.showFormError('再次输入的口令不一致');
