@@ -2,21 +2,26 @@
 
 __author__ = 'jun-x'
 
+
 'url handlers'
 
 import re, time, json, logging, hashlib, base64, asyncio
+
 from aiohttp import web
 import obj.awesome_python3_webapp.www.markdown2 as markdown2
 from obj.awesome_python3_webapp.www.coroweb import get, post
+
 from obj.awesome_python3_webapp.www.models import User, Comment, Blog, next_id
 from obj.awesome_python3_webapp.www.apis import APIPermissionError, APIValueError, APIError, Page
 from obj.awesome_python3_webapp.www.config import configs
 
+
+
 COOKIE_NAME = 'awesession'
 _COOKIE_KEY = configs.session.secret
 
-def check_admin(requst):
-    if requst.__user__ is None or not requst.__user__.admin:
+def check_admin(request):
+    if request.__user__ is None or not request.__user__.admin:
         raise APIPermissionError()
 
 def get_page_index(page_str):
@@ -32,25 +37,21 @@ def get_page_index(page_str):
 def user2cookie(user, max_age):
     '''
     Generate cookie str by user.
-    :param user:
-    :param max_age:
-    :return:
     '''
-    # build cookie string by: id-expires-shal
+    # build cookie string by: id-expires-sha1
     expires = str(int(time.time() + max_age))
     s = '%s-%s-%s-%s' % (user.id, user.passwd, expires, _COOKIE_KEY)
     L = [user.id, expires, hashlib.sha1(s.encode('utf-8')).hexdigest()]
     return '-'.join(L)
 
 def text2html(text):
-    lines = map(lambda s: '<p>%s</p>' % s.replace('&', '&amp;').replace('<', '&lt;').repalce('>', '&gt;').filter(lambda s: s.strip() != '', text.split('\n')))
+    lines = map(lambda s: '<p>%s</p>' % s.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;'), filter(lambda s: s.strip() != '', text.split('\n')))
     return ''.join(lines)
 
+@asyncio.coroutine
 def cookie2user(cookie_str):
     '''
     Parse cookie and load user if cookie is valid.
-    :param cookie_str:
-    :return:
     '''
     if not cookie_str:
         return None
@@ -76,7 +77,7 @@ def cookie2user(cookie_str):
 
 @get('/')
 def index(request):
-    summary = 'Lorem ipsum dolor sit amet, conserctetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et doloer magna aliqua.'
+    summary = 'Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.'
     blogs = [
         Blog(id='1', name='Test Blog', summary=summary, created_at=time.time()-120),
         Blog(id='2', name='Something New', summary=summary, created_at=time.time()-3600),
@@ -128,13 +129,13 @@ def authenticate(*, email, passwd):
     sha1.update(b':')
     sha1.update(passwd.encode('utf-8'))
     if user.passwd != sha1.hexdigest():
-        raise APIValueError('passwd', 'Invalid passwd.')
+        raise APIValueError('passwd', 'Invalid password.')
     # authenticate ok, set cookie:
     r = web.Response()
     r.set_cookie(COOKIE_NAME, user2cookie(user, 86400), max_age=86400, httponly=True)
     user.passwd = '******'
     r.content_type = 'application/json'
-    r.body = json.dumps(user, ensure_ascii=False,).encode('utf-8')
+    r.body = json.dumps(user, ensure_ascii=False).encode('utf-8')
     return r
 
 @get('/signout')
@@ -145,19 +146,26 @@ def signout(request):
     logging.info('user signed out.')
     return r
 
+@get('/manage/blogs')
+def manage_blogs(*, page='1'):
+    return {
+        '__template__': 'manage_blogs.html',
+        'page_index': get_page_index(page)
+    }
+
 @get('/manage/blogs/create')
 def manage_create_blog():
     return {
         '__template__': 'manage_blog_edit.html',
-        'id':'',
+        'id': '',
         'action': '/api/blogs'
     }
 
-_RE_EMAIL = re.compile(r'[a-z0-9\.\-\_]+\@[a-z0-9\-\_]+(\.[a-z0-9\-\_]+){1,4}$')
+_RE_EMAIL = re.compile(r'^[a-z0-9\.\-\_]+\@[a-z0-9\-\_]+(\.[a-z0-9\-\_]+){1,4}$')
 _RE_SHA1 = re.compile(r'^[0-9a-f]{40}$')
 
 @post('/api/users')
-def api_get_users(*,email, name, passwd):
+def api_register_user(*, email, name, passwd):
     if not name or not name.strip():
         raise APIValueError('name')
     if not email or not _RE_EMAIL.match(email):
@@ -171,7 +179,7 @@ def api_get_users(*,email, name, passwd):
     sha1_passwd = '%s:%s' % (uid, passwd)
     user = User(id=uid, name=name.strip(), email=email, passwd=hashlib.sha1(sha1_passwd.encode('utf-8')).hexdigest(), image='http://www.gravatar.com/avatar/%s?d=mm&s=120' % hashlib.md5(email.encode('utf-8')).hexdigest())
     yield from user.save()
-    # make session cookie
+    # make session cookie:
     r = web.Response()
     r.set_cookie(COOKIE_NAME, user2cookie(user, 86400), max_age=86400, httponly=True)
     user.passwd = '******'
@@ -179,20 +187,30 @@ def api_get_users(*,email, name, passwd):
     r.body = json.dumps(user, ensure_ascii=False).encode('utf-8')
     return r
 
+@get('/api/blogs')
+def api_blogs(*, page='1'):
+    page_index = get_page_index(page)
+    num = yield from Blog.findNumber('count(id)')
+    p = Page(num, page_index)
+    if num == 0:
+        return dict(page=p, blogs=())
+    blogs = yield from Blog.findAll(orderBy='created_at desc', limit=(p.offset, p.limit))
+    return dict(page=p, blogs=blogs)
+
 @get('/api/blogs/{id}')
 def api_get_blog(*, id):
     blog = yield from Blog.find(id)
     return blog
 
 @post('/api/blogs')
-def api_create_blog(requst, *, name, summary, content):
-    check_admin(requst)
+def api_create_blog(request, *, name, summary, content):
+    check_admin(request)
     if not name or not name.strip():
         raise APIValueError('name', 'name cannot be empty.')
     if not summary or not summary.strip():
         raise APIValueError('summary', 'summary cannot be empty.')
     if not content or not content.strip():
         raise APIValueError('content', 'content cannot be empty.')
-    blog = Blog(user_id=requst.__user__.id, user_name=requst.__user__.name, user_image=requst.__user__.image, name=name.strip(), summary=summary.strip(), content=content.strip())
+    blog = Blog(user_id=request.__user__.id, user_name=request.__user__.name, user_image=request.__user__.image, name=name.strip(), summary=summary.strip(), content=content.strip())
     yield from blog.save()
     return blog

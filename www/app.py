@@ -21,6 +21,7 @@ from obj.awesome_python3_webapp.www.coroweb import add_routes, add_static
 from obj.awesome_python3_webapp.www.config import configs
 from obj.awesome_python3_webapp.www.handlers import cookie2user, COOKIE_NAME
 
+
 def init_jinja2(app, **kw):
     logging.info('init jinja2...')
     options = dict(

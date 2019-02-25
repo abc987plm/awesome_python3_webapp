@@ -17,13 +17,13 @@ function initVM(blog) {
         methods: {
             submit: function (event) {
                 event.preventDefault();
-                var $form = $('#vm').find('from');
+                var $form = $('#vm').find('form');
                 $form.postJSON(action, this.$data, function (err, r) {
                     if (err) {
                         $form.showFormError(err);
                     }
                     else {
-                        return location.assign('/api/blogs/' + r.id);
+                        return location.assign('/api/blogs/');
                     }
                 });
             }

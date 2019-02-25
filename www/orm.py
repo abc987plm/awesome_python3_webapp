@@ -10,7 +10,6 @@ import aiomysql
 def log(sql, args=()):
     logging.info('SQL: %s' % sql)
 
-
 @asyncio.coroutine
 def create_pool(loop, **kw):
     logging.info('create database connection pool...')
@@ -28,7 +27,6 @@ def create_pool(loop, **kw):
         loop=loop
     )
 
-
 @asyncio.coroutine
 def select(sql, args, size=None):
     log(sql, args)
@@ -44,7 +42,6 @@ def select(sql, args, size=None):
         logging.info('rows returned: %s' % len(rs))
         return rs
 
-
 @asyncio.coroutine
 def execute(sql, args, autocommit=True):
     log(sql)
@@ -52,9 +49,10 @@ def execute(sql, args, autocommit=True):
         if not autocommit:
             yield from conn.begin()
         try:
-            cur = yield from conn.cursor(aiomysql.DictCursor)
+            cur = yield from conn.cursor()
             yield from cur.execute(sql.replace('?', '%s'), args)
             affected = cur.rowcount
+            yield from cur.close()
             if not autocommit:
                 yield from conn.commit()
         except BaseException as e:
@@ -62,7 +60,6 @@ def execute(sql, args, autocommit=True):
                 yield from conn.rollback()
             raise
         return affected
-
 
 def create_args_string(num):
     L = []
@@ -112,7 +109,7 @@ class ModelMetaclass(type):
         if name=='Model':
             return type.__new__(cls, name, bases, attrs)
         tableName = attrs.get('__table__', None) or name
-        logging.info('found model: %s (table:%s)' % (name, tableName))
+        logging.info('found model: %s (table: %s)' % (name, tableName))
         mappings = dict()
         fields = []
         primaryKey = None
@@ -121,7 +118,7 @@ class ModelMetaclass(type):
                 logging.info(' found mapping: %s ==> %s' % (k, v))
                 mappings[k] = v
                 if v.primary_key:
-                    # .
+                    # 找到主键：
                     if primaryKey:
                         raise RuntimeError('Duplicate primary key for field: %s' % k)
                     primaryKey = k
@@ -132,12 +129,12 @@ class ModelMetaclass(type):
         for k in mappings.keys():
             attrs.pop(k)
         escaped_fields = list(map(lambda f: '`%s`' % f, fields))
-        attrs['__mappings__'] = mappings # .
+        attrs['__mappings__'] = mappings # 保存属性和列的映射关系
         attrs['__table__'] = tableName
-        attrs['__primary_key__'] = primaryKey
-        attrs['__fields__'] = fields
+        attrs['__primary_key__'] = primaryKey # 主键属性名
+        attrs['__fields__'] = fields # 除主键外的属性名
         attrs['__select__'] = 'select `%s`, %s from `%s`' % (primaryKey, ', '.join(escaped_fields), tableName)
-        attrs['__insert__'] = 'insert into `%s` (%s, `%s`) values (%s)' % (tableName, ', '.join(escaped_fields), primaryKey, create_args_string(len(escaped_fields)+1))
+        attrs['__insert__'] = 'insert into `%s` (%s, `%s`) values (%s)' % (tableName, ', '.join(escaped_fields), primaryKey, create_args_string(len(escaped_fields) + 1))
         attrs['__update__'] = 'update `%s` set %s where `%s`=?' % (tableName, ', '.join(map(lambda f: '`%s`=?' % (mappings.get(f).name or f), fields)), primaryKey)
         attrs['__delete__'] = 'delete from `%s` where `%s`=?' % (tableName, primaryKey)
         return type.__new__(cls, name, bases, attrs)
@@ -169,7 +166,6 @@ class Model(dict, metaclass=ModelMetaclass):
                 setattr(self, key, value)
         return value
 
-
     @classmethod
     @asyncio.coroutine
     def findAll(cls, where=None, args=None, **kw):
@@ -198,12 +194,11 @@ class Model(dict, metaclass=ModelMetaclass):
         rs = yield from select(' '.join(sql), args)
         return [cls(**r) for r in rs]
 
-
     @classmethod
     @asyncio.coroutine
     def findNumber(cls, selectField, where=None, args=None):
-        ' find number by select and where.'
-        sql = ['select %s _num_from `%s`' % (selectField, cls.__select__)]
+        ' find number by select and where. '
+        sql = ['select %s _num_ from `%s`' % (selectField, cls.__table__)]
         if where:
             sql.append('where')
             sql.append(where)
@@ -212,11 +207,10 @@ class Model(dict, metaclass=ModelMetaclass):
             return None
         return rs[0]['_num_']
 
-
     @classmethod
     @asyncio.coroutine
-    def find(cls, pk) :
-        ' find object by primary key.'
+    def find(cls, pk):
+        ' find object by primary key. '
         rs = yield from select('%s where `%s`=?' % (cls.__select__, cls.__primary_key__), [pk], 1)
         if len(rs) == 0:
             return None
