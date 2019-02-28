@@ -90,7 +90,7 @@ class BooleanField(Field):
 
 class IntegerField(Field):
 
-    def __init__(self, name=None, primary_key=False, default=0.0):
+    def __init__(self, name=None, primary_key=False, default=0):
         super().__init__(name, 'bigint', primary_key, default)
 
 class FloatField(Field):
@@ -115,7 +115,7 @@ class ModelMetaclass(type):
         primaryKey = None
         for k, v in attrs.items():
             if isinstance(v, Field):
-                logging.info(' found mapping: %s ==> %s' % (k, v))
+                logging.info('  found mapping: %s ==> %s' % (k, v))
                 mappings[k] = v
                 if v.primary_key:
                     # 找到主键：
@@ -169,7 +169,7 @@ class Model(dict, metaclass=ModelMetaclass):
     @classmethod
     @asyncio.coroutine
     def findAll(cls, where=None, args=None, **kw):
-        ' find objects by where clause.'
+        ' find objects by where clause. '
         sql = [cls.__select__]
         if where:
             sql.append('where')

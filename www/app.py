@@ -15,11 +15,11 @@ from datetime import datetime
 from aiohttp import web
 from jinja2 import Environment, FileSystemLoader
 
-import obj.awesome_python3_webapp.www.orm as orm
-from obj.awesome_python3_webapp.www.coroweb import add_routes, add_static
+import orm as orm
+from coroweb import add_routes, add_static
 
-from obj.awesome_python3_webapp.www.config import configs
-from obj.awesome_python3_webapp.www.handlers import cookie2user, COOKIE_NAME
+from config import configs
+from handlers import cookie2user, COOKIE_NAME
 
 
 def init_jinja2(app, **kw):
@@ -127,13 +127,13 @@ def response_factory(app, handler):
 def datetime_filter(t):
     delta = int(time.time() - t)
     if delta < 60:
-        return u'1 min'
+        return u'1分钟前'
     if delta < 3600:
-        return u'befor %s min' % (delta // 60)
+        return u'%s分钟前' % (delta // 60)
     if delta < 86400:
-        return u'befor %s hous' % (delta // 3600)
+        return u'%s小时前' % (delta // 3600)
     if delta < 604800:
-        return u'befor %s day' % (delta // 86400)
+        return u'%s天前' % (delta // 86400)
     dt = datetime.fromtimestamp(t)
     return u'%s-%s-%s' % (dt.month, dt.day, dt.year)
 

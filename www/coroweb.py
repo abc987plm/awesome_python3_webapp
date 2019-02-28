@@ -9,7 +9,7 @@ from urllib import parse
 
 from aiohttp import web
 
-from obj.awesome_python3_webapp.www.apis import APIError
+from apis import APIError
 
 def get(path):
     '''

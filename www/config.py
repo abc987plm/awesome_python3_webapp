@@ -6,7 +6,7 @@ Configuration
 
 __author__ = 'jun-x'
 
-import obj.awesome_python3_webapp.www.config_default as config_default
+import config_default as config_default
 
 class Dict(dict):
     '''
